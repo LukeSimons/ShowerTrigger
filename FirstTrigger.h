@@ -20,7 +20,6 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <algorithm>
 #include <set>
 #include <cmath>
 #include "DataFormat/rawdigit.h"
@@ -37,6 +36,8 @@
 #include <TFile.h>
 #include <string>
 #include <fstream>
+#include <map>
+#include <time.h>
 
 namespace larlite {
   /**
@@ -47,18 +48,48 @@ namespace larlite {
 
   private:
 
-    // Declare histograms
-    TH1I  *h_HITS; 
-    std::string name;
-    double T;
+    int _evtN;
+    int _hitNo, _hitNoU, _hitNoV, _hitNoY; 
+    float _TDCstd, _TDCstdU, _TDCstdV, _TDCstdY;
+    float _TDCiqr, _TDCiqrU, _TDCiqrV, _TDCiqrY;
+    float _ADCamp, _ADCampU, _ADCampV, _ADCampY;
+    float _WFint, _WFintU, _WFintV, _WFintY;
+    
+    std::map <int,int> _HitMap;
+    std::map <int,int> _ClusterWires;
+    std::map <int,int> _ClusterWiresTwo;
 
-    std::vector<double> hitNo, uhitNo, vhitNo, yhitNo, ADCvec, UADCvec, VADCvec, YADCvec, intvec, Uintvec, Vintvec, Yintvec;
-    std::vector<int> eventNo, TDCvec, UTDCvec, VTDCvec, YTDCvec;
+    // TDC standard deviations
+    float stdTDC, UstdTDC, VstdTDC, YstdTDC;
+    // Mean amplitudes
+    double MampADC, UMampADC, VMampADC, YMampADC, SDampADC, USDampADC, VSDampADC, YSDampADC;
+    // TDC interquartile ranges
+    int iqrTDC, UiqrTDC, ViqrTDC, YiqrTDC;
+    // Numbers of hits
+    int _isHit, uHit ,vHit, yHit;
+    // integrated ADC waveforms
+    double intADC,UintADC,VintADC,YintADC;
+
+    // wire and event number
+    int wire, event;    
+
+    double Tolerance;
+    // file names for use in simplewfana.py
+    std::string nm, fnm;
+
+    // Vectors for TDC times of hits
+    std::vector<int> TDCvec, UTDCvec, VTDCvec, YTDCvec;
+    // Vectors for ADC amplitudes of hits
+    std::vector<double> ADCvec, UADCvec, VADCvec, YADCvec;
+
+    std::vector<int> WireNumbers, ClusterSize, WireNumbersTwo, ClusterSizeTwo;
+ 
+    TTree* _t_ch;
 
 
   public:
     /// Default constructor
-    FirstTrigger(double Tolerance, std::string nm){ _name="exampleAnaunit"; _fout=0 ; T=Tolerance; name=nm; };
+    FirstTrigger(double T, std::string name){ _name="exampleAnaunit"; _fout=0 ; Tolerance=T; nm=name; };
 
     /// Default destructor
     virtual ~FirstTrigger(){}
@@ -78,8 +109,13 @@ namespace larlite {
     */
     virtual bool finalize();
 
+    // Accessor function for tolerance
+    double GetT() {
+      return Tolerance;
+    }
+    // Accessor functions for file names
     std::string GetName() {
-      return name;
+      return nm;
     }
 
    

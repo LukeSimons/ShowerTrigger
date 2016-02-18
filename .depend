@@ -321,4 +321,3 @@ FirstTrigger.o: FirstTrigger.cxx FirstTrigger.h \
  /grid/fermiapp/products/larsoft/gcc/v4_9_2/Linux64bit+2.6-2.12/include/c++/4.9.2/x86_64-unknown-linux-gnu/bits/c++io.h \
  /grid/fermiapp/products/larsoft/gcc/v4_9_2/Linux64bit+2.6-2.12/include/c++/4.9.2/bits/fstream.tcc \
  /uboone/app/users/lsimons/MyLArLite/core/DataFormat/mcshower.h
-sample.o: sample.cxx sample.h
