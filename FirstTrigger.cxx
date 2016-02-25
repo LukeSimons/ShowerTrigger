@@ -3,7 +3,7 @@
 
 #include "FirstTrigger.h"
 #include "DataFormat/mcshower.h"
-
+#include <iostream>
 namespace larlite {
 
   // ---- LOCAL FUNCTIONS ---- //
@@ -111,10 +111,11 @@ namespace larlite {
 
   // ---- MEMBER FUNCTIONS ---- //
 
-
   bool FirstTrigger::initialize() {
     // Set event number to 0
     _evtN = 0;
+    _HitMap.clear(); _ClusterWires.clear(); _ClusterWiresTwo.clear();
+    WireNumbers.clear(); ClusterSize.clear(); WireNumbersTwo.clear(); ClusterSizeTwo.clear();
 
     _t_ch = new TTree("ch_tree","");
     _t_ch->Branch("evt",&_evtN,"evt/i");
@@ -147,15 +148,14 @@ namespace larlite {
     _t_ch->Branch("WireNumbersTwo",&WireNumbersTwo,"WireNumbersTwo/i");
     _t_ch->Branch("ClusterSizeTwo",&ClusterSizeTwo,"ClusterSizeTwo/i");
 
-
     _t_ch->SetDirectory(0);
 
     return true;
-    
-  }
+  }    
+ 
    
   bool FirstTrigger::analyze(storage_manager* storage) {
-    if( _evtN == 0 ){
+    if( _evtN < 5){
     // Get rawdigit data
     auto wfs = storage->get_data<event_rawdigit>("daq");
     // Display error if rawdigit data not present
@@ -166,20 +166,16 @@ namespace larlite {
 
     // Initialize hit counter for event
     _isHit = 0; uHit = 0; vHit = 0; yHit = 0;
-
     // Initialize integration counter for event
     intADC = 0; UintADC = 0; VintADC = 0; YintADC = 0;
-
     // Clear TDC and ADC vectors
     TDCvec.clear(); UTDCvec.clear(); VTDCvec.clear(); YTDCvec.clear();
     ADCvec.clear(); UADCvec.clear(); VADCvec.clear(); YADCvec.clear();
-    _HitMap.clear(); _ClusterWires.clear(); _ClusterWiresTwo.clear();
-    WireNumbers.clear(); ClusterSize.clear(); WireNumbersTwo.clear(); ClusterSizeTwo.clear();
 
     double offset(0), T(0);
 
-    bool NewClust = true;
-    int OldNumberOfHits(0), NewNumberOfHits(0), ClusterStart(0), RunningTotal(0);
+    bool NewClust = true, NewClustTwo = true;
+    int OldNumberOfHits(0), NewNumberOfHits(0), ClusterStart(0), ClusterStartTwo(0), ClusterEndTwo(0), RunningTotal(0), CurrentTotal(0);
     std::cout << "EventNumber: " << _evtN << "\n";
 
     // Loop over all wires in event
@@ -194,7 +190,38 @@ namespace larlite {
 
         // Get tolerance from python script
         T = FirstTrigger::GetT();
-/* 
+   
+        NewNumberOfHits = hitPerWire(adcs,T,offset);
+
+        // Cluster finding method One
+        if( NewNumberOfHits > 0 ) _HitMap.push_back( std::pair<int,int>(i,hitPerWire(adcs,T,offset)) );
+        if( OldNumberOfHits > 0 ){
+          if( NewNumberOfHits > 0) WireNumbers.push_back(i);
+          if( NewNumberOfHits > 0 && NewClust == false ){ ClusterStart = i; NewClust = true; } // Record start of cluster
+          else if( NewNumberOfHits == 0 && NewClust == true ){
+            _ClusterWires.push_back( std::pair<int,int>(ClusterStart,i) );
+            ClusterSize.push_back((i-ClusterStart));
+            std::cout << "Start: " << ClusterStart << ", End: " << i << "\n";
+            NewClust = false;
+          }
+        }
+        RunningTotal += NewNumberOfHits;
+        CurrentTotal += NewNumberOfHits;
+        // Cumulative Method
+        if(i-ClusterEndTwo > 0 && i > 0){
+          //std::cout << CurrentTotal / (i-ClusterEndTwo) << " > " << (RunningTotal / i )*(i-ClusterEndTwo+1) << "?\n";
+          if( CurrentTotal / (i-ClusterEndTwo) > (RunningTotal / i )*(i-ClusterEndTwo) ){
+            if( NewClustTwo == true ) ClusterStartTwo = i;
+            WireNumbersTwo.push_back(i);
+            NewClustTwo = false;
+          }else{
+            ClusterSizeTwo.push_back(CurrentTotal); CurrentTotal = 0; 
+            ClusterEndTwo = i; _ClusterWiresTwo.push_back( std::pair<int,int>(ClusterStartTwo,i) ); NewClustTwo = true;  
+          }
+        }
+        OldNumberOfHits = NewNumberOfHits;
+
+        /* 
         // Calculate total number of hits
         // Add to hit counter for event
         // Change to hitCount() for number of hit wires
@@ -236,32 +263,9 @@ namespace larlite {
             if(i>=2400&&i<4800){VADCvec.push_back(v_ADCamp[f]);}
             if(i>=4800&&i<8256){YADCvec.push_back(v_ADCamp[f]);}
         }
-*/    
+*/ 
 
-        NewNumberOfHits = hitPerWire(adcs,T,offset);
-        // Cluster finding method
-        if( NewNumberOfHits > 0 ) _HitMap.insert( std::pair<int,int>(i,hitPerWire(adcs,T,offset)) );
-        if( OldNumberOfHits > 0 ){
-          if( NewNumberOfHits > 0 && NewClust == false ){ ClusterStart = i; NewClust = true; } // Record start of cluster
-          else if( NewNumberOfHits == 0 && NewClust == true ){
-            _ClusterWires.insert( std::pair<int,int>(ClusterStart,i) );
-            WireNumbers.push_back(i);
-            ClusterSize.push_back(i-ClusterStart);       
-            std::cout << "Start: " << ClusterStart << ", End: " << i << "\n";
-            NewClust = false;
-          }
-
-          // Cumulative Method
-          if( RunningTotal > 0 && ( RunningTotal / ( i - ClusterStart + 1 ) ) > 1 ){
-            RunningTotal += NewNumberOfHits;
- 
-            _ClusterWiresTwo.insert( std::pair<int,int>(ClusterStart,i) );
-            WireNumbersTwo.push_back(i);
-            ClusterSizeTwo.push_back(RunningTotal);
-          }else{ RunningTotal = 0; }
-        }  
-        OldNumberOfHits = NewNumberOfHits;
-    }
+    } // End of "for(size_t i=0; i < wfs->size(); i++)"
 
 /* COMMENT OUT TDCIQR and Mean Amplitude
     // Calculate standard deviations of TDCs of hits in each plane
@@ -307,8 +311,8 @@ namespace larlite {
     //for (size_t i=0; i < wfs->size(); i++){
       
     //}
-    }
-    _t_ch->Fill();
+    } // end of if(_evtN < 5)
+    _t_ch->Fill(); 
     _evtN += 1;
      return true;
   }
@@ -321,6 +325,10 @@ namespace larlite {
       std::cout << "writing ch tree" << std::endl;
       _t_ch->Write();
     }
+
+    //for(unsigned int j(0); j < WireNumbersTwo.size(); j++){
+    //  std::cout << j << " " << WireNumbersTwo[j] << "\n";
+    //}
     //outfile->Close();
 
      return true;

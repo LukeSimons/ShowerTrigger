@@ -38,6 +38,7 @@
 #include <fstream>
 #include <map>
 #include <time.h>
+#include <utility>
 
 namespace larlite {
   /**
@@ -54,11 +55,10 @@ namespace larlite {
     float _TDCiqr, _TDCiqrU, _TDCiqrV, _TDCiqrY;
     float _ADCamp, _ADCampU, _ADCampV, _ADCampY;
     float _WFint, _WFintU, _WFintV, _WFintY;
-    
-    std::map <int,int> _HitMap;
-    std::map <int,int> _ClusterWires;
-    std::map <int,int> _ClusterWiresTwo;
 
+    std::vector< std::pair<int,int> >  _ClusterWiresTwo, _ClusterWires,_HitMap;
+    std::vector<int> WireNumbers, ClusterSize, WireNumbersTwo, ClusterSizeTwo;
+ 
     // TDC standard deviations
     float stdTDC, UstdTDC, VstdTDC, YstdTDC;
     // Mean amplitudes
@@ -82,8 +82,6 @@ namespace larlite {
     // Vectors for ADC amplitudes of hits
     std::vector<double> ADCvec, UADCvec, VADCvec, YADCvec;
 
-    std::vector<int> WireNumbers, ClusterSize, WireNumbersTwo, ClusterSizeTwo;
- 
     TTree* _t_ch;
 
 
